@@ -1,0 +1,6 @@
+{
+  "name": "SRE Incident Response Agent",
+  "description": "Autonomous SRE incident triage and mitigation agent powered by Vectorize Hindsight memory and AI synthesis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

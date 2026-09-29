@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0f1115;
+  --ink: #e0e0e0;
+  --accent: #ff3e3e;
+  --ink-muted: rgba(224, 224, 224, 0.5);
+  --ink-faint: rgba(224, 224, 224, 0.08);
+  --danger: #ff3e3e;
+  --success: #00ff88;
+  --warning: #ffcc00;
+  --panel: #16191f;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: 'Geist', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background-image: radial-gradient(var(--ink-faint) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, .font-syne {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+  }
+
+  code, pre, .font-mono, .mono {
+    font-family: 'Space Mono', monospace;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: #ffffff;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #0f1115;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(224, 224, 224, 0.15);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Corner accent decoration from Variation 5 */
+.corner-accent {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(45deg, transparent 50%, var(--accent) 50%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.corner-accent-green {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(45deg, transparent 50%, var(--success) 50%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Timeline node slash marker from Variation 5 */
+.timeline-node-marker::before {
+  content: '///';
+  position: absolute;
+  left: -11px;
+  top: -2px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: -0.05em;
+  color: var(--accent);
+  background: var(--panel);
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+.timeline-node-marker-green::before {
+  content: '///';
+  position: absolute;
+  left: -11px;
+  top: -2px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: -0.05em;
+  color: var(--success);
+  background: var(--panel);
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

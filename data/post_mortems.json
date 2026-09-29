@@ -1,0 +1,86 @@
+[
+  {
+    "incident_id": "INC-2024-0819-HIKARI",
+    "service": "payment-gateway-v2",
+    "severity": "P1-CRITICAL",
+    "symptom": "504 Gateway Timeout detected on checkout endpoint under traffic surge",
+    "root_cause": "HikariPool-1 connection pool exhaustion. Database connection pool max-lifetime was set to 30s while queries stalled on unindexed lock contention in checkout_transactions table, starving pool threads after 30000ms timeout.",
+    "resolution_steps": [
+      "Temporarily increase HikariCP maximumPoolSize from 10 to 35 via ConfigMap hot-reload",
+      "Terminate long-running unindexed idle-in-transaction queries on payment-db-primary using pg_terminate_backend()",
+      "Trigger rolling restart of payment-gateway-v2 pods to clear exhausted thread pools",
+      "Deploy index on checkout_transactions (customer_id, status, created_at) to restore p99 query latency under 15ms"
+    ],
+    "effective_runbook": "RB-PAY-042: HikariCP Connection Pool Exhaustion & Idle Connection Purge"
+  },
+  {
+    "incident_id": "INC-2024-0902-REDIS",
+    "service": "auth-service",
+    "severity": "P2-HIGH",
+    "symptom": "OOMKilled pods crashing repeatedly under elevated login requests",
+    "root_cause": "Container memory limit 512Mi breached. Redis session tokens were written without TTL expiration following auth-v2.4 deploy, creating unbounded in-memory session hash growth until cgroup memory limit killed the pod.",
+    "resolution_steps": [
+      "Scale auth-service Kubernetes deployment memory limit from 512Mi to 2Gi to stabilize running pods",
+      "Execute Redis scan and set default 86400s TTL on all orphaned session:* keys",
+      "Configure redis.conf maxmemory-policy to volatile-lru to evict expired tokens automatically under memory pressure",
+      "Roll back auth-service deployment to image v2.3.9 until session TTL patch is merged"
+    ],
+    "effective_runbook": "RB-AUTH-019: Session Cache OOM & Redis Memory Eviction Stabilization"
+  },
+  {
+    "incident_id": "INC-2024-1014-COREDNS",
+    "service": "notification-dispatcher",
+    "severity": "P1-CRITICAL",
+    "symptom": "Stale DNS resolution causing connection refusal to AWS SES SMTP endpoints",
+    "root_cause": "CoreDNS upstream forwarder timeout in k8s cluster. CoreDNS pods cached negative NXDOMAIN response after AWS SES regional DNS rotation, causing outbound SMTP connection timeouts to email.us-east-1.amazonaws.com.",
+    "resolution_steps": [
+      "Flush CoreDNS cache across kube-system namespace by performing rollout restart of coredns deployment",
+      "Verify outbound reachability to email.us-east-1.amazonaws.com port 587 from dispatcher pods using nc -zv",
+      "Update CoreDNS ConfigMap to reduce cache negative TTL from 300s to 10s for external AWS domains",
+      "Re-queue failed transaction notification events in dead-letter-queue DLQ-NOTIF-HIGH"
+    ],
+    "effective_runbook": "RB-NET-077: CoreDNS Resolver Stale Cache Flush & External Egress Recovery"
+  },
+  {
+    "incident_id": "INC-2024-1108-KAFKA",
+    "service": "order-fulfillment-engine",
+    "severity": "P1-CRITICAL",
+    "symptom": "Consumer lag spiking past 250,000 messages on topic orders.created.v1",
+    "root_cause": "Kafka consumer group rebalance deadlock caused by slow synchronous RPC calls in message processing loop exceeding max.poll.interval.ms (300000ms), triggering continuous partitions revocation.",
+    "resolution_steps": [
+      "Increase consumer group partitions from 12 to 24 on topic orders.created.v1 to allow horizontal worker scaling",
+      "Scale order-fulfillment-engine deployment replicas from 4 to 12 in kubernetes",
+      "Update consumer config max.poll.interval.ms from 300s to 900s and decouple slow inventory RPC into async worker thread pool",
+      "Monitor lag reduction using kafka-consumer-groups.sh until consumer lag drops below 1,000 messages"
+    ],
+    "effective_runbook": "RB-KAFKA-012: Consumer Lag Recovery & Rebalance Storm Resolution"
+  },
+  {
+    "incident_id": "INC-2024-1122-PG-LOCK",
+    "service": "inventory-mgmt-api",
+    "severity": "P2-HIGH",
+    "symptom": "Database CPU at 100% and connection saturation with query lock wait spikes",
+    "root_cause": "Deadlock cycle on inventory_sku_levels table due to non-deterministic ordering of multi-item lock acquisition during batch checkout transactions.",
+    "resolution_steps": [
+      "Identify blocking queries using pg_stat_activity with wait_event_type = 'Lock'",
+      "Kill root blocking PID using SELECT pg_cancel_backend(pid)",
+      "Hot-patch inventory service to enforce ascending SKU ID sorting prior to executing SELECT FOR UPDATE",
+      "Enable lock_timeout = '5s' in database connection parameters to prevent permanent pool starvation"
+    ],
+    "effective_runbook": "RB-DB-005: PostgreSQL Lock Contention & Transaction Deadlock Resolution"
+  },
+  {
+    "incident_id": "INC-2024-1215-INGRESS",
+    "service": "api-gateway-edge",
+    "severity": "P1-CRITICAL",
+    "symptom": "NGINX Ingress returning 502 Bad Gateway with worker_connections are not enough in error logs",
+    "root_cause": "Default worker_connections limit (1024) exceeded during flash sale traffic burst, causing NGINX worker processes to drop incoming TCP handshakes.",
+    "resolution_steps": [
+      "Update ingress-nginx-controller ConfigMap: set max-worker-connections to 16384 and worker-processes to 'auto'",
+      "Increase Linux kernel somaxconn and net.ipv4.tcp_max_syn_backlog to 65535 on cluster nodes",
+      "Perform rolling restart of ingress-nginx pods with zero downtime",
+      "Verify edge error rate drops to 0.00% on Grafana ingress dashboard"
+    ],
+    "effective_runbook": "RB-EDGE-033: NGINX Ingress Worker Saturation & Edge Backlog Tuning"
+  }
+]
